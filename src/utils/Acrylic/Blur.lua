@@ -8,7 +8,10 @@ local New = Creator.New
 
 
 local viewportPointToWorld, getOffset = unpack(require("./Utils"))
-local BlurFolder = Instance.new("Folder", cloneref(game:GetService("Workspace")).CurrentCamera)
+-- Cache the Workspace service once. render() runs on every camera-move frame, so calling
+-- game:GetService("Workspace") (+ cloneref) inside it was a per-frame service lookup.
+local Workspace = cloneref(game:GetService("Workspace"))
+local BlurFolder = Instance.new("Folder", Workspace.CurrentCamera)
 
 
 local function createAcrylic()
@@ -52,16 +55,8 @@ local function createAcrylicBlur(distance)
 	end
 
 	local function render()
-		local res = cloneref(game:GetService("Workspace")).CurrentCamera
-		if res then
-			res = res.CFrame
-		end
-		local cond = res
-		if not cond then
-			cond = CFrame.new()
-		end
-
-		local camera = cond
+		local cam = Workspace.CurrentCamera
+		local camera = (cam and cam.CFrame) or CFrame.new()
 		local topLeft = positions.topLeft
 		local topRight = positions.topRight
 		local bottomRight = positions.bottomRight
@@ -88,7 +83,7 @@ local function createAcrylicBlur(distance)
 	end
 
 	local function renderOnChange()
-		local camera = cloneref(game:GetService("Workspace")).CurrentCamera
+		local camera = Workspace.CurrentCamera
 		if not camera then
 			return
 		end

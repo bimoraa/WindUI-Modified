@@ -2,13 +2,13 @@
 
 return [[
 {
-    "name": "windui",
+    "name": "windui-modified",
     "version": "1.6.65",
     "main": "./dist/main.lua",
-    "repository": "https://github.com/Footagesus/WindUI",
+    "repository": "https://github.com/bimoraa/WindUI-Modified",
     "discord": "https://discord.gg/ftgs-development-hub-1300692552005189632",
     "author": "Footagesus",
-    "description": "Roblox UI Library for scripts",
+    "description": "WindUI Modified - Roblox UI Library for scripts (modified from Footagesus/WindUI)",
     "license": "MIT",
     "scripts": {
         "dev": "bash build/build.sh dev $INPUT_FILE",

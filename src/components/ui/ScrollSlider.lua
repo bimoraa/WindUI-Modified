@@ -121,15 +121,19 @@ function ScrollSlider.New(ScrollingFrame, Parent, Window, Thickness)
             isDragging = true
             dragOffset = input.Position.Y - Thumb.AbsolutePosition.Y
             
+            -- Cache slider/thumb bounds ONCE at drag start (they do not change mid-drag).
+            -- Previously these were read (AbsolutePosition/AbsoluteSize → forced layout flush)
+            -- on every mouse-move frame (~60/sec) inside the move handler below.
+            local sliderTop = Slider.AbsolutePosition.Y
+            local sliderHeight = Slider.AbsoluteSize.Y
+            local thumbHeight = Thumb.AbsoluteSize.Y
+
             local moveConnection
             local releaseConnection
 
             moveConnection = UserInputService.InputChanged:Connect(function(changedInput)
                 if changedInput.UserInputType == Enum.UserInputType.MouseMovement or changedInput.UserInputType == Enum.UserInputType.Touch then
-                    local sliderTop = Slider.AbsolutePosition.Y
-                    local sliderHeight = Slider.AbsoluteSize.Y
-                    local thumbHeight = Thumb.AbsoluteSize.Y
-                    
+                    -- sliderTop / sliderHeight / thumbHeight are cached at drag start (see above)
                     local newY = changedInput.Position.Y - sliderTop - dragOffset
                     local maxThumbPos = sliderHeight - thumbHeight
                     

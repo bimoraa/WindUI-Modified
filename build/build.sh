@@ -19,13 +19,17 @@ R='\033[0m'
 if [ "$MODE" = "dev" ]; then
     INPUT=${2:-"./main.lua"}
     PREFIX="${D}[ DEV ]${R}"
+    # Dev: bundle only (fast, readable) for live iteration.
+    CONFIG="build/darklua.dev.config.json"
 else
     INPUT="src/Init.lua"
     PREFIX="${B}[ BUILD ]${R}"
+    # Build: full minify (strip comments/spaces/types, rename vars, fold constants,
+    # drop dead code) so the shipped dist/main.lua is as light as possible.
+    CONFIG="build/darklua.config.json"
 fi
 
 OUTPUT="dist/main.lua"
-CONFIG="build/darklua.dev.config.json"
 
 PKG=$(node -e "const p=require('./package.json');console.log(JSON.stringify({v:p.version||'',d:p.description||'',r:p.repository||'',s:p.discord||'',l:p.license||''}))")
 

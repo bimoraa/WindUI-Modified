@@ -653,14 +653,16 @@ function Creator.Drag(mainFrame, dragFrames, ondrag)
 		end
 
 		local delta = input.Position - dragStart
-		Creator.Tween(mainFrame, 0.02, {
-			Position = UDim2.new(
-				startPos.X.Scale,
-				startPos.X.Offset + delta.X,
-				startPos.Y.Scale,
-				startPos.Y.Offset + delta.Y
-			),
-		}):Play()
+		-- Assign Position directly instead of tweening on every mouse move.
+		-- The old 0.02s tween was shorter than one frame (so it never visibly animated) yet
+		-- allocated a fresh Tween + TweenInfo on every InputChanged → ~60-120 throwaway tweens/sec
+		-- while dragging. Direct assignment tracks the cursor 1:1 with no allocation.
+		mainFrame.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
 	end
 
 	for _, dragFrame in pairs(dragFrames) do
@@ -705,16 +707,10 @@ function Creator.Drag(mainFrame, dragFrames, ondrag)
 			end
 		end)
 
-		dragFrame.InputChanged:Connect(function(input)
-			if dragging and currentDragFrame == dragFrame then
-				if
-					input.UserInputType == Enum.UserInputType.MouseMovement
-					or input.UserInputType == Enum.UserInputType.Touch
-				then
-					update(input)
-				end
-			end
-		end)
+		-- NOTE: the per-dragFrame InputChanged handler was removed. The global
+		-- UserInputService.InputChanged below already drives the active drag (and keeps tracking
+		-- even when the cursor leaves the drag handle), so the per-frame one only caused a second
+		-- redundant update() call per mouse move.
 	end
 
 	UserInputService.InputChanged:Connect(function(input)

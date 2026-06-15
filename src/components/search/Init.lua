@@ -201,6 +201,9 @@ function SearchBar.new(TabModule, Parent, OnClose)
 		]]
 	})
 
+	-- Connections for the current search-result tabs; disconnected at the start of each Search.
+	local resultConns = {}
+
 	local function CreateSearchTab(Title, Desc, Icon, Parent, IsParent, Callback)
 		local Tab = New("TextButton", {
 			Size = UDim2.new(1, 0, 0, 0),
@@ -344,19 +347,29 @@ function SearchBar.new(TabModule, Parent, OnClose)
 				or (((SearchBarModule.Padding - 2) * 2) + Tab.Main.Outline.Frame.Title.TextBounds.Y)
 		)
 
-		Creator.AddSignal(Tab.Main.MouseEnter, function()
-			Tween(Tab.Main, 0.04, { ImageTransparency = 0.95 }):Play()
-			--Tween(Tab.Main.Outline, 0.04, { ImageTransparency = 0.75 }):Play()
-		end)
-		Creator.AddSignal(Tab.Main.InputEnded, function()
-			Tween(Tab.Main, 0.08, { ImageTransparency = 1 }):Play()
-			--Tween(Tab.Main.Outline, 0.08, { ImageTransparency = 1 }):Play()
-		end)
-		Creator.AddSignal(Tab.Main.MouseButton1Click, function()
-			if Callback then
-				Callback()
-			end
-		end)
+		-- Track result-tab connections locally instead of via Creator.AddSignal, so the global
+		-- Creator.Signals array does not grow by 3 dead entries per result on every keystroke.
+		-- They are disconnected at the start of each Search (see SearchBarModule:Search).
+		table.insert(
+			resultConns,
+			Tab.Main.MouseEnter:Connect(function()
+				Tween(Tab.Main, 0.04, { ImageTransparency = 0.95 }):Play()
+			end)
+		)
+		table.insert(
+			resultConns,
+			Tab.Main.InputEnded:Connect(function()
+				Tween(Tab.Main, 0.08, { ImageTransparency = 1 }):Play()
+			end)
+		)
+		table.insert(
+			resultConns,
+			Tab.Main.MouseButton1Click:Connect(function()
+				if Callback then
+					Callback()
+				end
+			end)
+		)
 
 		return Tab
 	end
@@ -467,6 +480,12 @@ function SearchBar.new(TabModule, Parent, OnClose)
 
 	function SearchBarModule:Search(query)
 		query = query or ""
+
+		-- Free the previous result set's connections before the list is destroyed/rebuilt.
+		for _, conn in ipairs(resultConns) do
+			conn:Disconnect()
+		end
+		table.clear(resultConns)
 
 		local result = Search(query)
 

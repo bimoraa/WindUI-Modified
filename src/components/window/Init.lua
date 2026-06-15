@@ -2002,7 +2002,8 @@ return function(Config)
 			--Tween(FullScreenIcon.ImageLabel, 0.12, {ImageTransparency = 0}):Play()
 			Tween(ResizeHandle.ImageLabel, 0.1, { ImageTransparency = 0.35 }):Play()
 
-			Creator.AddSignal(input.Changed, function()
+			local resizeChangedConn
+			resizeChangedConn = Creator.AddSignal(input.Changed, function()
 				if input.UserInputState == Enum.UserInputState.End then
 					if Config.WindUI.CurrentInput and Config.WindUI.CurrentInput ~= CurResizeInput then
 						return
@@ -2015,6 +2016,13 @@ return function(Config)
 					--Tween(FullScreenIcon, 0.2, {ImageTransparency = 1}):Play()
 					--Tween(FullScreenIcon.ImageLabel, 0.17, {ImageTransparency = 1}):Play()
 					Tween(ResizeHandle.ImageLabel, 0.17, { ImageTransparency = 0.8 }):Play()
+
+					-- Free this per-drag listener so repeated resizes don't accumulate orphaned
+					-- input.Changed connections.
+					if resizeChangedConn then
+						resizeChangedConn:Disconnect()
+						resizeChangedConn = nil
+					end
 				end
 			end)
 		end
@@ -2052,9 +2060,10 @@ return function(Config)
 					math.clamp(newSize.Y.Offset, Window.MinSize.Y, Window.MaxSize.Y)
 				)
 
-				Tween(Window.UIElements.Main, 0.08, {
-					Size = newSize,
-				}, Enum.EasingStyle.Quad, Enum.EasingDirection.Out):Play()
+				-- Assign Size directly. The 0.08s tween was restarted every ~16ms for the whole
+				-- resize drag (so it never actually animated) while allocating a fresh Tween per
+				-- mouse move → 60+ throwaway tweens/sec and visible FPS drop while resizing.
+				Window.UIElements.Main.Size = newSize
 
 				Window.Size = newSize
 			end

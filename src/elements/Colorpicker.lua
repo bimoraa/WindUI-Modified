@@ -603,11 +603,21 @@ function Element:Colorpicker(Config, Window, WindUI, OnApply)
 
 	-- fu
 
+	-- Slider bounds captured once when a slider becomes active (see InputBegan handlers below).
+	-- Avoids reading AbsolutePosition/AbsoluteSize — each a forced layout flush — on every
+	-- InputChanged frame (4-8 reads/frame at 60Hz) while dragging hue/sat/transparency.
+	local activeBounds = nil
+
 	local function UpdateSatVib(SatVibMap, Colorpicker)
-		local MinX = SatVibMap.AbsolutePosition.X
-		local MaxX = MinX + SatVibMap.AbsoluteSize.X
-		local MinY = SatVibMap.AbsolutePosition.Y
-		local MaxY = MinY + SatVibMap.AbsoluteSize.Y
+		local MinX, MaxX, MinY, MaxY
+		if activeBounds then
+			MinX, MaxX, MinY, MaxY = activeBounds.MinX, activeBounds.MaxX, activeBounds.MinY, activeBounds.MaxY
+		else
+			MinX = SatVibMap.AbsolutePosition.X
+			MaxX = MinX + SatVibMap.AbsoluteSize.X
+			MinY = SatVibMap.AbsolutePosition.Y
+			MaxY = MinY + SatVibMap.AbsoluteSize.Y
+		end
 
 		local MouseX = math.clamp(Mouse.X, MinX, MaxX)
 		local MouseY = math.clamp(Mouse.Y, MinY, MaxY)
@@ -619,8 +629,13 @@ function Element:Colorpicker(Config, Window, WindUI, OnApply)
 	end
 
 	local function UpdateHue(HueSlider, Colorpicker)
-		local MinY = HueSlider.AbsolutePosition.Y
-		local MaxY = MinY + HueSlider.AbsoluteSize.Y
+		local MinY, MaxY
+		if activeBounds then
+			MinY, MaxY = activeBounds.MinY, activeBounds.MaxY
+		else
+			MinY = HueSlider.AbsolutePosition.Y
+			MaxY = MinY + HueSlider.AbsoluteSize.Y
+		end
 
 		local MouseY = math.clamp(Mouse.Y, MinY, MaxY)
 
@@ -630,8 +645,13 @@ function Element:Colorpicker(Config, Window, WindUI, OnApply)
 	end
 
 	local function UpdateTransparency(TransparencySlider, Colorpicker)
-		local MinY = TransparencySlider.AbsolutePosition.Y
-		local MaxY = MinY + TransparencySlider.AbsoluteSize.Y
+		local MinY, MaxY
+		if activeBounds then
+			MinY, MaxY = activeBounds.MinY, activeBounds.MaxY
+		else
+			MinY = TransparencySlider.AbsolutePosition.Y
+			MaxY = MinY + TransparencySlider.AbsoluteSize.Y
+		end
 
 		local MouseY = math.clamp(Mouse.Y, MinY, MaxY)
 
@@ -678,7 +698,16 @@ function Element:Colorpicker(Config, Window, WindUI, OnApply)
 
 		ActiveSlider = "SatVib"
 
-		UpdateSatVib(Colorpicker.UIElements.SatVibMap, Colorpicker)
+		local map = Colorpicker.UIElements.SatVibMap
+		local minX, minY = map.AbsolutePosition.X, map.AbsolutePosition.Y
+		activeBounds = {
+			MinX = minX,
+			MaxX = minX + map.AbsoluteSize.X,
+			MinY = minY,
+			MaxY = minY + map.AbsoluteSize.Y,
+		}
+
+		UpdateSatVib(map, Colorpicker)
 	end)
 
 	HueSlider.InputBegan:Connect(function(input)
@@ -699,6 +728,9 @@ function Element:Colorpicker(Config, Window, WindUI, OnApply)
 		end
 
 		ActiveSlider = "Hue"
+
+		local minY = HueSlider.AbsolutePosition.Y
+		activeBounds = { MinY = minY, MaxY = minY + HueSlider.AbsoluteSize.Y }
 
 		UpdateHue(HueSlider, Colorpicker)
 	end)
@@ -722,11 +754,15 @@ function Element:Colorpicker(Config, Window, WindUI, OnApply)
 
 		ActiveSlider = "Transparency"
 
+		local minY = TransparencySlider.AbsolutePosition.Y
+		activeBounds = { MinY = minY, MaxY = minY + TransparencySlider.AbsoluteSize.Y }
+
 		UpdateTransparency(TransparencySlider, Colorpicker)
 	end)
 
 	UserInputService.InputEnded:Connect(function(input)
 		ActiveSlider = nil
+		activeBounds = nil
 
 		if WindUI.CurrentInput and WindUI.CurrentInput ~= CurInput then
 			return
