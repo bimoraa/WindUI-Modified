@@ -111,7 +111,17 @@ return {
 				end
 
 				if Window.NewElements then
-					tbl:UpdateAllElementShapes(tbl)
+					-- Coalesce shape updates: a burst of N synchronous element adds collapses into a
+					-- single UpdateAllElementShapes on the next defer point (was O(N²) — one full
+					-- re-iteration of every prior element per add). Visually identical; shapes settle
+					-- before the next frame paints.
+					tbl.__shapeUpdatePending = true
+					task.defer(function()
+						if tbl.__shapeUpdatePending then
+							tbl.__shapeUpdatePending = false
+							tbl:UpdateAllElementShapes(tbl)
+						end
+					end)
 				end
 
 				if OnElementCreateFunction then

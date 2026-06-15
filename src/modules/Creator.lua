@@ -133,6 +133,44 @@ Creator = {
 	ThemeChangeCallbacks = {},
 }
 
+-- Some executors (and sandboxed game contexts such as the Actor VMs used by games like
+-- Grow a Garden) run the UI build on a thread whose capability set is missing "Plugin".
+-- In that state even `Instance.new` raises:
+--   "The current thread cannot access 'Instance' (lacking capability Plugin)"
+-- Restoring the thread identity to plugin level re-grants those capabilities. This is a no-op
+-- in Studio and on executors that don't expose the identity API (the pcall just fails
+-- quietly), so it never affects the non-exploit path.
+local getThreadIdentity = getthreadidentity
+	or get_thread_identity
+	or getidentity
+	or (syn and syn.get_thread_identity)
+local setThreadIdentity = setthreadidentity
+	or set_thread_identity
+	or setidentity
+	or (syn and syn.set_thread_identity)
+
+local PLUGIN_IDENTITY = 8
+
+function Creator.RestoreCapability()
+	if not setThreadIdentity then
+		return
+	end
+
+	-- Only escalate when the current thread is actually below plugin level so we skip a
+	-- redundant identity write on every instance created during a large UI build.
+	if getThreadIdentity then
+		local ok, identity = pcall(getThreadIdentity)
+		if ok and type(identity) == "number" and identity >= PLUGIN_IDENTITY then
+			return
+		end
+	end
+
+	pcall(setThreadIdentity, PLUGIN_IDENTITY)
+end
+
+-- Restore once on load so the very first instances (ScreenGui, UIScale) in Init.lua are safe.
+Creator.RestoreCapability()
+
 function Creator.Init(WindUITable)
 	WindUI = WindUITable
 
@@ -514,6 +552,11 @@ function Creator.AddIcons(packName, iconsData)
 end
 
 function Creator.New(Name, Properties, Children)
+	-- Ensure the running thread holds the capability to access `Instance` before creating one.
+	-- UI built later (dropdowns, dialogs) runs inside task.spawn'd / signal threads that may
+	-- start below plugin level, so the guard lives here at the single instance-creation funnel.
+	Creator.RestoreCapability()
+
 	local Object = Instance.new(Name)
 
 	for Name, Value in next, Creator.DefaultProperties[Name] or {} do

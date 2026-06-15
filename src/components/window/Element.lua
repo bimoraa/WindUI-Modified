@@ -347,21 +347,6 @@ return function(Config)
 	-- print(Config.Index)
 	-- print("Squircle")
 
-	local LockedIcon = Creator.Image("lock", "lock", 0, Config.Window.Folder, "Lock", false)
-	LockedIcon.Size = UDim2.new(0, 20, 0, 20)
-	LockedIcon.ImageLabel.ImageColor3 = Color3.new(1, 1, 1)
-	LockedIcon.ImageLabel.ImageTransparency = 0.4
-
-	local LockedTitle = New("TextLabel", {
-		Text = "Locked",
-		TextSize = 18,
-		FontFace = Font.new(Creator.Font, Enum.FontWeight.Medium),
-		AutomaticSize = "XY",
-		BackgroundTransparency = 1,
-		TextColor3 = Color3.new(1, 1, 1),
-		TextTransparency = 0.05,
-	})
-
 	local ElementFullFrame = New("Frame", {
 		Size = UDim2.new(1, Element.UIPadding * 2, 1, Element.UIPadding * 2),
 		BackgroundTransparency = 1,
@@ -370,124 +355,179 @@ return function(Config)
 		ZIndex = 9999999,
 	})
 
-	local Locked, LockedTable = NewRoundFrame(Element.UICorner, "Squircle", {
-		Size = UDim2.new(1, 0, 1, 0),
-		ImageTransparency = 0.25,
-		ImageColor3 = Color3.new(0, 0, 0),
-		Visible = false,
-		Active = false,
-		Parent = ElementFullFrame,
-	}, {
-		New("UIListLayout", {
-			FillDirection = "Horizontal",
-			VerticalAlignment = "Center",
-			HorizontalAlignment = "Center",
-			Padding = UDim.new(0, 8),
-		}),
-		LockedIcon,
-		LockedTitle,
-	}, nil, true)
+	-- Element state overlays (Locked / Highlight / Hover) are built lazily on first use instead
+	-- of eagerly at construction. Most elements are never locked, highlighted, or hovered, so this
+	-- keeps ~5 NewRoundFrames (+2 gradients) and their AbsoluteSize signals PER element OUT of the
+	-- initial-load burst. Explicit ZIndex (1..5) reproduces the original sibling draw order, so the
+	-- result is visually identical regardless of which overlay is created first.
+	local Main, MainTable -- assigned below; forward-declared so the lazy builders can read MainTable:GetType()
+	local Locked, LockedTable, LockedTitle
+	local HighlightOutline, HighlightOutlineTable
+	local Highlight, HighlightTable
+	local HoverOutline, HoverOutlineTable
+	local Hover, HoverTable
 
-	local HighlightOutline, HighlightOutlineTable = NewRoundFrame(Element.UICorner, "Squircle-Outline", {
-		Size = UDim2.new(1, 0, 1, 0),
-		ImageTransparency = 1, -- 0.25
-		Active = false,
-		ThemeTag = {
-			ImageColor3 = "Text",
-		},
-		Parent = ElementFullFrame,
-	}, {
-		New("UIListLayout", {
-			FillDirection = "Horizontal",
-			VerticalAlignment = "Center",
-			HorizontalAlignment = "Center",
-			Padding = UDim.new(0, 8),
-		}),
-	}, nil, true)
+	local function ensureLocked()
+		if Locked then
+			return
+		end
+		local LockedIcon = Creator.Image("lock", "lock", 0, Config.Window.Folder, "Lock", false)
+		LockedIcon.Size = UDim2.new(0, 20, 0, 20)
+		LockedIcon.ImageLabel.ImageColor3 = Color3.new(1, 1, 1)
+		LockedIcon.ImageLabel.ImageTransparency = 0.4
 
-	local Highlight, HighlightTable = NewRoundFrame(Element.UICorner, "Squircle", {
-		Size = UDim2.new(1, 0, 1, 0),
-		ImageTransparency = 1, -- 0.88
-		Active = false,
-		ThemeTag = {
-			ImageColor3 = "Text",
-		},
-		Parent = ElementFullFrame,
-	}, {
-		New("UIListLayout", {
-			FillDirection = "Horizontal",
-			VerticalAlignment = "Center",
-			HorizontalAlignment = "Center",
-			Padding = UDim.new(0, 8),
-		}),
-	}, nil, true)
-
-	local HoverOutline, HoverOutlineTable = NewRoundFrame(Element.UICorner, "Squircle-Outline", {
-		Size = UDim2.new(1, 0, 1, 0),
-		ImageTransparency = 1, -- 0.25
-		Visible = false,
-		Active = false,
-		ThemeTag = {
-			ImageColor3 = "Text",
-		},
-		Parent = ElementFullFrame,
-	}, {
-		New("UIListLayout", {
-			FillDirection = "Horizontal",
-			VerticalAlignment = "Center",
-			HorizontalAlignment = "Center",
-			Padding = UDim.new(0, 8),
-		}),
-		New("UIGradient", {
-			Name = "HoverGradient",
-			Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
-				ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
-				ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+		LockedTitle = New("TextLabel", {
+			Text = "Locked",
+			TextSize = 18,
+			FontFace = Font.new(Creator.Font, Enum.FontWeight.Medium),
+			AutomaticSize = "XY",
+			BackgroundTransparency = 1,
+			TextColor3 = Color3.new(1, 1, 1),
+			TextTransparency = 0.05,
+		})
+		Locked, LockedTable = NewRoundFrame(Element.UICorner, "Squircle", {
+			Size = UDim2.new(1, 0, 1, 0),
+			ImageTransparency = 0.25,
+			ImageColor3 = Color3.new(0, 0, 0),
+			Visible = false,
+			Active = false,
+			Parent = ElementFullFrame,
+		}, {
+			New("UIListLayout", {
+				FillDirection = "Horizontal",
+				VerticalAlignment = "Center",
+				HorizontalAlignment = "Center",
+				Padding = UDim.new(0, 8),
 			}),
-			Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 1),
-				NumberSequenceKeypoint.new(0.25, 0.9),
-				NumberSequenceKeypoint.new(0.5, 0.3),
-				NumberSequenceKeypoint.new(0.75, 0.9),
-				NumberSequenceKeypoint.new(1, 1),
-			}),
-		}),
-	}, nil, true)
+			LockedIcon,
+			LockedTitle,
+		}, nil, true)
+		Locked.ZIndex = 1
+		Element.UIElements.Locked = Locked
+		-- Adopt the element's current (possibly morphed) shape so a lazily-built overlay matches
+		-- Main even if UpdateShape already ran (NewElements grouped layouts). Mirrors UpdateShape.
+		if Config.Window.NewElements and MainTable then
+			LockedTable:SetType(MainTable:GetType())
+		end
+	end
 
-	local Hover, HoverTable = NewRoundFrame(Element.UICorner, "Squircle", {
-		Size = UDim2.new(1, 0, 1, 0),
-		ImageTransparency = 1, -- 0.88
-		Active = false,
-		ThemeTag = {
-			ImageColor3 = "Text",
-		},
-		Parent = ElementFullFrame,
-	}, {
-		New("UIGradient", {
-			Name = "HoverGradient",
-			Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
-				ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
-				ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+	local function ensureHighlight()
+		if Highlight then
+			return
+		end
+		HighlightOutline, HighlightOutlineTable = NewRoundFrame(Element.UICorner, "Squircle-Outline", {
+			Size = UDim2.new(1, 0, 1, 0),
+			ImageTransparency = 1, -- 0.25
+			Active = false,
+			ThemeTag = {
+				ImageColor3 = "Text",
+			},
+			Parent = ElementFullFrame,
+		}, {
+			New("UIListLayout", {
+				FillDirection = "Horizontal",
+				VerticalAlignment = "Center",
+				HorizontalAlignment = "Center",
+				Padding = UDim.new(0, 8),
 			}),
-			Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 1),
-				NumberSequenceKeypoint.new(0.25, 0.9),
-				NumberSequenceKeypoint.new(0.5, 0.3),
-				NumberSequenceKeypoint.new(0.75, 0.9),
-				NumberSequenceKeypoint.new(1, 1),
+		}, nil, true)
+		Highlight, HighlightTable = NewRoundFrame(Element.UICorner, "Squircle", {
+			Size = UDim2.new(1, 0, 1, 0),
+			ImageTransparency = 1, -- 0.88
+			Active = false,
+			ThemeTag = {
+				ImageColor3 = "Text",
+			},
+			Parent = ElementFullFrame,
+		}, {
+			New("UIListLayout", {
+				FillDirection = "Horizontal",
+				VerticalAlignment = "Center",
+				HorizontalAlignment = "Center",
+				Padding = UDim.new(0, 8),
 			}),
-		}),
-		New("UIListLayout", {
-			FillDirection = "Horizontal",
-			VerticalAlignment = "Center",
-			HorizontalAlignment = "Center",
-			Padding = UDim.new(0, 8),
-		}),
-	}, nil, true)
+		}, nil, true)
+		HighlightOutline.ZIndex = 2
+		Highlight.ZIndex = 3
+		if Config.Window.NewElements and MainTable then
+			HighlightTable:SetType(MainTable:GetType())
+		end
+	end
 
-	local Main, MainTable = NewRoundFrame(Element.UICorner, "Squircle", {
+	local function ensureHover()
+		if Hover then
+			return
+		end
+		HoverOutline, HoverOutlineTable = NewRoundFrame(Element.UICorner, "Squircle-Outline", {
+			Size = UDim2.new(1, 0, 1, 0),
+			ImageTransparency = 1, -- 0.25
+			Visible = false,
+			Active = false,
+			ThemeTag = {
+				ImageColor3 = "Text",
+			},
+			Parent = ElementFullFrame,
+		}, {
+			New("UIListLayout", {
+				FillDirection = "Horizontal",
+				VerticalAlignment = "Center",
+				HorizontalAlignment = "Center",
+				Padding = UDim.new(0, 8),
+			}),
+			New("UIGradient", {
+				Name = "HoverGradient",
+				Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+					ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+					ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+				}),
+				Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 1),
+					NumberSequenceKeypoint.new(0.25, 0.9),
+					NumberSequenceKeypoint.new(0.5, 0.3),
+					NumberSequenceKeypoint.new(0.75, 0.9),
+					NumberSequenceKeypoint.new(1, 1),
+				}),
+			}),
+		}, nil, true)
+		Hover, HoverTable = NewRoundFrame(Element.UICorner, "Squircle", {
+			Size = UDim2.new(1, 0, 1, 0),
+			ImageTransparency = 1, -- 0.88
+			Active = false,
+			ThemeTag = {
+				ImageColor3 = "Text",
+			},
+			Parent = ElementFullFrame,
+		}, {
+			New("UIGradient", {
+				Name = "HoverGradient",
+				Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+					ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+					ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+				}),
+				Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 1),
+					NumberSequenceKeypoint.new(0.25, 0.9),
+					NumberSequenceKeypoint.new(0.5, 0.3),
+					NumberSequenceKeypoint.new(0.75, 0.9),
+					NumberSequenceKeypoint.new(1, 1),
+				}),
+			}),
+			New("UIListLayout", {
+				FillDirection = "Horizontal",
+				VerticalAlignment = "Center",
+				HorizontalAlignment = "Center",
+				Padding = UDim.new(0, 8),
+			}),
+		}, nil, true)
+		HoverOutline.ZIndex = 4
+		Hover.ZIndex = 5
+		if Config.Window.NewElements and MainTable then
+			HoverTable:SetType(MainTable:GetType())
+		end
+	end
+	Main, MainTable = NewRoundFrame(Element.UICorner, "Squircle", {
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = "Y",
 		ImageTransparency = Element.Color and 0.05 or (not Config.Window.NewElements and 0.93 or nil),
@@ -516,7 +556,7 @@ return function(Config)
 	}, true, true)
 
 	Element.UIElements.Main = Main
-	Element.UIElements.Locked = Locked
+	-- Element.UIElements.Locked is assigned lazily by ensureLocked() on first :Lock().
 
 	if Element.Hover then
 		-- Track the per-hover MouseMoved connection so it is disconnected on hover-exit.
@@ -526,6 +566,7 @@ return function(Config)
 		local moveConn
 		Creator.AddSignal(Main.MouseEnter, function()
 			if CanHover then
+				ensureHover() -- build hover overlays on first hover (lazy)
 				--Tween(Main, 0.12, { ImageTransparency = Element.Color and 0.15 or 0.9 }):Play()
 				Tween(Hover, 0.12, { ImageTransparency = 0.9 }):Play()
 				Tween(HoverOutline, 0.12, { ImageTransparency = 0.8 }):Play()
@@ -543,8 +584,11 @@ return function(Config)
 		Creator.AddSignal(Main.InputEnded, function()
 			if CanHover then
 				--Tween(Main, 0.12, { ImageTransparency = Element.Color and 0.05 or 0.93 }):Play()
-				Tween(Hover, 0.12, { ImageTransparency = 1 }):Play()
-				Tween(HoverOutline, 0.12, { ImageTransparency = 1 }):Play()
+				-- Hover overlays may not exist yet (e.g. a touch tap with no prior hover).
+				if Hover then
+					Tween(Hover, 0.12, { ImageTransparency = 1 }):Play()
+					Tween(HoverOutline, 0.12, { ImageTransparency = 1 }):Play()
+				end
 				if moveConn then
 					moveConn:Disconnect()
 					moveConn = nil
@@ -700,6 +744,7 @@ return function(Config)
 	end
 
 	function Element:Lock(newtitle)
+		ensureLocked() -- build the lock overlay on first lock (lazy)
 		CanHover = false
 		Locked.Active = true
 		Locked.Visible = true
@@ -708,11 +753,14 @@ return function(Config)
 
 	function Element:Unlock()
 		CanHover = true
-		Locked.Active = false
-		Locked.Visible = false
+		if Locked then
+			Locked.Active = false
+			Locked.Visible = false
+		end
 	end
 
 	function Element:Highlight()
+		ensureHighlight() -- build highlight overlays on first highlight (lazy)
 		local OutlineGradient = New("UIGradient", {
 			Color = ColorSequence.new({
 				ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
@@ -779,11 +827,17 @@ return function(Config)
 
 			if newShape and Main then
 				MainTable:SetType(newShape)
-				LockedTable:SetType(newShape)
-				HighlightTable:SetType(newShape)
-				--HighlightOutlineTable:SetType(newShape .. "-Outline")
-				HoverTable:SetType(newShape)
-				--HoverOutlineTable:SetType(newShape .. "-Outline")
+				-- Overlay tables may not exist yet (lazy-built on first use); each adopts the
+				-- correct shape when it is created, so only update the ones already built.
+				if LockedTable then
+					LockedTable:SetType(newShape)
+				end
+				if HighlightTable then
+					HighlightTable:SetType(newShape)
+				end
+				if HoverTable then
+					HoverTable:SetType(newShape)
+				end
 			end
 		end
 	end
