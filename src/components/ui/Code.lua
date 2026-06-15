@@ -190,7 +190,9 @@ function Code.New(Code, Title, Parent, Callback, UIScale)
 
     Creator.AddSignal(CopyButton.MouseButton1Click, function()
         if Callback then
-            Callback()
+            -- route the user copy callback through SafeCallback: a user error must not
+            -- break the copy-icon feedback below or leave this signal handler dead
+            Creator.SafeCallback(Callback)
             local CheckIcon = Creator.Icon("check")
             CopyButton.Button.ImageLabel.Image = CheckIcon[1]
             CopyButton.Button.ImageLabel.ImageRectSize = CheckIcon[2].ImageRectSize

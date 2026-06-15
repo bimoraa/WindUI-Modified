@@ -2,6 +2,10 @@
 
 local cloneref = (cloneref or clonereference or function(instance) return instance end)
 
+-- cache the singleton services once instead of re-resolving them on each Enable/Disable/register
+local Lighting = cloneref(game:GetService("Lighting"))
+local Workspace = cloneref(game:GetService("Workspace"))
+
 
 local Acrylic = {
 	AcrylicBlur = require("./Blur"),
@@ -21,7 +25,7 @@ function Acrylic.init()
 		for _, effect in pairs(depthOfFieldDefaults) do
 			effect.Enabled = false
 		end
-		baseEffect.Parent = cloneref(game:GetService("Lighting"))
+		baseEffect.Parent = Lighting
 	end
 
 	function Acrylic.Disable()
@@ -38,12 +42,12 @@ function Acrylic.init()
 			end
 		end
 
-		for _, child in pairs(cloneref(game:GetService("Lighting")):GetChildren()) do
+		for _, child in pairs(Lighting:GetChildren()) do
 			register(child)
 		end
 
-		if cloneref(game:GetService("Workspace")).CurrentCamera then
-			for _, child in pairs(cloneref(game:GetService("Workspace")).CurrentCamera:GetChildren()) do
+		if Workspace.CurrentCamera then
+			for _, child in pairs(Workspace.CurrentCamera:GetChildren()) do
 				register(child)
 			end
 		end

@@ -8,10 +8,11 @@ function Label.New(Text, Icon, Parent, IsPlaceholder, Radius, RemoveGlass)
 	local Radius = Radius or 10
 	local IconLabelFrame
 	if Icon and Icon ~= "" then
+		local iconData = Creator.Icon(Icon) -- resolve once instead of 3 lookups
 		IconLabelFrame = New("ImageLabel", {
-			Image = Creator.Icon(Icon)[1],
-			ImageRectSize = Creator.Icon(Icon)[2].ImageRectSize,
-			ImageRectOffset = Creator.Icon(Icon)[2].ImageRectPosition,
+			Image = iconData[1],
+			ImageRectSize = iconData[2].ImageRectSize,
+			ImageRectOffset = iconData[2].ImageRectPosition,
 			Size = UDim2.new(0, 24 - 3, 0, 24 - 3),
 			BackgroundTransparency = 1,
 			ThemeTag = {

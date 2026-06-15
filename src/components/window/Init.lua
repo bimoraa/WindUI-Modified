@@ -118,7 +118,9 @@ return function(Config)
 		math.clamp(WindowSize.Y.Offset, Window.MinSize.Y, Window.MaxSize.Y)
 	)
 
-	if Window.Topbar == {} then
+	-- `== {}` is always false (table identity); use next() so an explicitly-empty Topbar
+	-- actually falls back to defaults. type-guarded so a nil Topbar stays nil-safe like before.
+	if type(Window.Topbar) == "table" and next(Window.Topbar) == nil then
 		Window.Topbar = { Height = 52, ButtonsType = "Default" }
 	end
 
@@ -484,7 +486,8 @@ return function(Config)
 
 		if Window.User.Callback then
 			Creator.AddSignal(UserIcon.MouseButton1Click, function()
-				Window.User.Callback()
+				-- isolate the user avatar callback so its errors can't kill the click handler
+				Creator.SafeCallback(Window.User.Callback)
 			end)
 			Creator.AddSignal(UserIcon.MouseEnter, function()
 				Tween(UserIcon.UserIcon, 0.04, { ImageTransparency = 0.95 }):Play()
@@ -973,7 +976,8 @@ return function(Config)
 
 		Creator.AddSignal(Button.MouseButton1Click, function()
 			if Callback then
-				Callback()
+				-- isolate the user topbar-button callback so its errors can't kill the handler
+				Creator.SafeCallback(Callback)
 			end
 		end)
 		Creator.AddSignal(Button.MouseEnter, function()
@@ -1419,8 +1423,13 @@ return function(Config)
 
 		Config.WindUI:ToggleAcrylic(false)
 
-		if Window.UIElements.Main and Window.UIElements.Main:WaitForChild("Main") then
-			Window.UIElements.Main.Main.Visible = false
+		-- FindFirstChild instead of WaitForChild: during Close() the "Main" child normally
+		-- exists, but if it was already destroyed WaitForChild would hang the thread forever.
+		if Window.UIElements.Main then
+			local mainFrame = Window.UIElements.Main:FindFirstChild("Main")
+			if mainFrame then
+				mainFrame.Visible = false
+			end
 		end
 
 		Window.CanDropdown = false
@@ -1899,7 +1908,7 @@ return function(Config)
 				button.AutomaticSize = Enum.AutomaticSize.X
 			end
 
-			wait()
+			task.wait()
 
 			local totalWidth = ButtonsLayout.AbsoluteContentSize.X / Config.WindUI.UIScale
 			local parentWidth = ButtonsContent.AbsoluteSize.X / Config.WindUI.UIScale
@@ -1991,6 +2000,12 @@ return function(Config)
 	end
 
 	local CurResizeInput = Config.WindUI.GenerateGUID()
+
+	-- These were implicit globals (no `local`), leaking resize state to the global table.
+	-- All references live below in this same builder scope, so scoping them here is behaviour-identical.
+	local isResizing = false
+	local initialSize
+	local initialInputPosition
 
 	local function startResizing(input)
 		if Window.CanResize then

@@ -352,8 +352,12 @@ function Element:New(Config)
 		if currentValue > newMax then
 			Slider:Set(newMax)
 		else
-			local newDelta =
-				math.clamp((currentValue - (Slider.Value.Min or 0)) / (newMax - (Slider.Value.Min or 0)), 0, 1)
+			-- guard the degenerate max == min case so the division can't yield NaN (which
+			-- would silently snap the fill to 0 via UDim2.new(NaN,...))
+			local range = newMax - (Slider.Value.Min or 0)
+			local newDelta = range ~= 0
+				and math.clamp((currentValue - (Slider.Value.Min or 0)) / range, 0, 1)
+				or 0
 			Tween(Slider.UIElements.SliderIcon.Frame, 0.1, { Size = UDim2.new(newDelta, 0, 1, 0) }):Play()
 		end
 	end
@@ -365,7 +369,11 @@ function Element:New(Config)
 		if currentValue < newMin then
 			Slider:Set(newMin)
 		else
-			local newDelta = math.clamp((currentValue - newMin) / ((Slider.Value.Max or 100) - newMin), 0, 1)
+			-- guard the degenerate min == max case (see SetMax) against a NaN division
+			local range = (Slider.Value.Max or 100) - newMin
+			local newDelta = range ~= 0
+				and math.clamp((currentValue - newMin) / range, 0, 1)
+				or 0
 			Tween(Slider.UIElements.SliderIcon.Frame, 0.1, { Size = UDim2.new(newDelta, 0, 1, 0) }):Play()
 		end
 	end

@@ -202,7 +202,7 @@ function IconModule.Image(IconConfig)
             for _, part in next, IconLabel[2].Parts do  
                 local IconPartLabel = IconModule.Icon(part, Icon.Type)  
                   
-                local IconPart = Instance.New("ImageLabel")  
+                local IconPart = Instance.new("ImageLabel")
                 IconPart.Size = UDim2.new(1,0,1,0)  
                 IconPart.BackgroundTransparency = 1  
                 IconPart.ImageColor3 = Colors[1 + _].Color  

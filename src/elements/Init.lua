@@ -97,9 +97,24 @@ return {
 					function content:Destroy()
 						frame:Destroy()
 
-						table.remove(Window.AllElements, config.GlobalIndex)
-						table.remove(tbl.Elements, config.Index)
-						table.remove(Tab.Elements, config.Index)
+						-- Look up the live position by identity instead of the index captured at
+						-- creation: once any earlier sibling is destroyed, table.remove shifts every
+						-- later element's position, so the stored indices go stale and would remove
+						-- the wrong entries.
+						local gIdx = table.find(Window.AllElements, content)
+						if gIdx then
+							table.remove(Window.AllElements, gIdx)
+						end
+						local tIdx = table.find(tbl.Elements, content)
+						if tIdx then
+							table.remove(tbl.Elements, tIdx)
+						end
+						if Tab then
+							local tabIdx = table.find(Tab.Elements, content)
+							if tabIdx then
+								table.remove(Tab.Elements, tabIdx)
+							end
+						end
 						tbl:UpdateAllElementShapes(tbl)
 					end
 				end

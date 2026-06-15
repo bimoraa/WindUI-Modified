@@ -3,8 +3,8 @@ local cloneref = (cloneref or clonereference or function(instance)
 end)
 
 local UserInputService = cloneref(game:GetService("UserInputService"))
-local Mouse = cloneref(game:GetService("Players")).LocalPlayer:GetMouse()
-local Camera = cloneref(game:GetService("Workspace")).CurrentCamera
+-- removed dead `Mouse` and `Camera` locals: neither was read, and the Mouse one ran
+-- LocalPlayer:GetMouse() at require time (a load-time crash if LocalPlayer wasn't ready yet).
 
 local Creator = require("../modules/Creator")
 local New = Creator.New
@@ -14,7 +14,7 @@ local CreateLabel = require("../components/ui/Label").New
 local CreateInput = require("../components/ui/Input").New
 local CreateDropdown = require("../components/ui/Dropdown").New
 
-local CurrentCamera = workspace.CurrentCamera
+-- removed dead `local CurrentCamera = workspace.CurrentCamera` (never read; raw workspace access)
 
 local Element = {
 	UICorner = 10,

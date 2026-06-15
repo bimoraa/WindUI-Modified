@@ -426,7 +426,9 @@ function KeySystem.new(Config, Filename, func, keyValidator)
 
 	local function handleSuccess(key)
 		KeyDialog:Close()()
-		writefile((Config.Folder or "Temp") .. "/" .. Filename .. ".key", tostring(key))
+		-- pcall: a writefile failure must not throw before func(true), which would leave
+		-- the window-creation wait loop hanging forever.
+		pcall(writefile, (Config.Folder or "Temp") .. "/" .. Filename .. ".key", tostring(key))
 		task.wait(0.4)
 		func(true)
 	end
@@ -436,7 +438,17 @@ function KeySystem.new(Config, Filename, func, keyValidator)
 		local folder = Config.Folder or Config.Title
 
 		if Config.KeySystem.KeyValidator then
-			local isValid = Config.KeySystem.KeyValidator(key)
+			-- pcall the user-supplied validator so a throwing validator surfaces an error
+			-- notification instead of silently killing the Submit handler.
+			local cbOk, isValid = pcall(Config.KeySystem.KeyValidator, key)
+			if not cbOk then
+				Config.WindUI:Notify({
+					Title = "Key System. Error",
+					Content = "Validator error: " .. tostring(isValid),
+					Icon = "triangle-alert",
+				})
+				return
+			end
 
 			if isValid then
 				if Config.KeySystem.SaveKey then
@@ -469,12 +481,14 @@ function KeySystem.new(Config, Filename, func, keyValidator)
 		else
 			local isSuccess, result
 			for _, service in next, Services do
-				local success, res = service.Verify(key)
-				if success then
+				-- pcall each network Verify so one failing service degrades to the next /
+				-- to an error notification instead of throwing out of the Submit handler.
+				local ok, success, res = pcall(service.Verify, key)
+				if ok and success then
 					isSuccess, result = true, res
 					break
 				end
-				result = res
+				result = (ok and res) or success or result
 			end
 
 			if isSuccess then

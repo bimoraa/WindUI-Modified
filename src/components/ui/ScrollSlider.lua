@@ -127,6 +127,9 @@ function ScrollSlider.New(ScrollingFrame, Parent, Window, Thickness)
             local sliderTop = Slider.AbsolutePosition.Y
             local sliderHeight = Slider.AbsoluteSize.Y
             local thumbHeight = Thumb.AbsoluteSize.Y
+            -- Thumb.Size only changes on canvas/window resize (not mid-drag), so cache its
+            -- scale here instead of re-reading the UDim2 on every move frame below.
+            local thumbSizeScale = Thumb.Size.Y.Scale
 
             local moveConnection
             local releaseConnection
@@ -137,7 +140,7 @@ function ScrollSlider.New(ScrollingFrame, Parent, Window, Thickness)
                     local newY = changedInput.Position.Y - sliderTop - dragOffset
                     local maxThumbPos = sliderHeight - thumbHeight
                     
-                    local newThumbPosScale = math.clamp(newY / maxThumbPos, 0, 1 - Thumb.Size.Y.Scale)
+                    local newThumbPosScale = math.clamp(newY / maxThumbPos, 0, 1 - thumbSizeScale)
                     
                     Thumb.Position = UDim2.new(0, 0, newThumbPosScale, 0)
                     updateScrollingFramePosition()

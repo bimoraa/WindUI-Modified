@@ -94,7 +94,9 @@ local Acrylic = require("./utils/Acrylic/Init")
 
 local ProtectGui = protectgui or (syn and syn.protect_gui) or function() end
 
-local GUIParent = gethui and gethui() or (CoreGui or LocalPlayer:WaitForChild("PlayerGui"))
+-- nil-guard LocalPlayer: it's only reached if both gethui and CoreGui are unavailable,
+-- but indexing a nil LocalPlayer there would abort the whole load before any UI exists.
+local GUIParent = (gethui and gethui()) or CoreGui or (LocalPlayer and LocalPlayer:WaitForChild("PlayerGui"))
 
 local UIScaleObj = New("UIScale", {
 	Scale = WindUI.UIScale,
@@ -271,7 +273,10 @@ function WindUI:Gradient(stops, props)
 		return a.Time < b.Time
 	end)
 
-	if #colorSequence < 2 then
+	if #colorSequence == 0 then
+		-- no valid stops: turn a confusing nil-index crash into a legible error
+		error("[ WindUI:Gradient ] stops must contain at least one valid numeric keypoint")
+	elseif #colorSequence < 2 then
 		table.insert(colorSequence, ColorSequenceKeypoint.new(1, colorSequence[1].Value))
 		table.insert(transparencySequence, NumberSequenceKeypoint.new(1, transparencySequence[1].Value))
 	end
@@ -306,14 +311,18 @@ function WindUI:CreateWindow(Config)
 	local CreateWindow = require("./components/window/Init")
 
 	if not RunService:IsStudio() and writefile then
-		if not isfolder("WindUI") then
-			makefolder("WindUI")
-		end
-		if Config.Folder then
-			makefolder(Config.Folder)
-		else
-			makefolder(Config.Title)
-		end
+		-- guard every makefolder with isfolder (some executors throw when re-creating an
+		-- existing folder) and pcall the whole block so a filesystem failure or a nil
+		-- Folder/Title can never abort window creation
+		pcall(function()
+			if not isfolder("WindUI") then
+				makefolder("WindUI")
+			end
+			local folder = Config.Folder or Config.Title
+			if folder and not isfolder(folder) then
+				makefolder(folder)
+			end
+		end)
 	end
 
 	Config.WindUI = WindUI
@@ -352,9 +361,11 @@ function WindUI:CreateWindow(Config)
 		if Config.KeySystem.KeyValidator then
 			if Config.KeySystem.SaveKey and isfile(keyPath) then
 				local savedKey = readfile(keyPath)
-				local isValid = Config.KeySystem.KeyValidator(savedKey)
+				-- pcall the user validator so a throwing validator falls back to the key
+				-- dialog instead of crashing CreateWindow and hanging the load.
+				local cbOk, isValid = pcall(Config.KeySystem.KeyValidator, savedKey)
 
-				if isValid then
+				if cbOk and isValid then
 					CanLoadWindow = true
 				else
 					loadKeysystem()
@@ -389,11 +400,16 @@ function WindUI:CreateWindow(Config)
 							table.insert(args, i[argName])
 						end
 
-						local service = serviceData.New(table.unpack(args))
-						local success = service.Verify(fileKey)
-						if success then
-							isSuccess = true
-							break
+						-- pcall the service constructor + Verify: a network/HTTP failure inside a
+						-- key service must not throw here, or CanLoadWindow would stay false and the
+						-- `repeat task.wait() until CanLoadWindow` loop below would hang forever.
+						local newOk, service = pcall(serviceData.New, table.unpack(args))
+						if newOk and service then
+							local verOk, success = pcall(service.Verify, fileKey)
+							if verOk and success then
+								isSuccess = true
+								break
+							end
 						end
 					end
 				end

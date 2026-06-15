@@ -5,10 +5,19 @@ local cloneref = (cloneref or clonereference or function(instance)
 end)
 
 local UserInputService = cloneref(game:GetService("UserInputService"))
-local Mouse = cloneref(game:GetService("Players")).LocalPlayer:GetMouse()
+local Players = cloneref(game:GetService("Players"))
 local Camera = cloneref(game:GetService("Workspace")).CurrentCamera
 
-local CurrentCamera = workspace.CurrentCamera
+-- Resolve the Mouse lazily on first use instead of at require time, so requiring this
+-- module before LocalPlayer exists can't crash the load.
+local Mouse
+local function getMouse()
+	if not Mouse then
+		Mouse = Players.LocalPlayer:GetMouse()
+	end
+	return Mouse
+end
+-- removed dead `local CurrentCamera = workspace.CurrentCamera` (never read; raw workspace access)
 
 local CreateInput = require("./Input").New
 
@@ -660,15 +669,15 @@ function DropdownMenu.New(Config, Dropdown, Element, CanCallback, Type)
 			local ButtonAbsPos = DropdownButton.AbsolutePosition
 			local ButtonAbsSize = DropdownButton.AbsoluteSize
 
-			local isClickOnDropdown = Mouse.X >= ButtonAbsPos.X
-				and Mouse.X <= ButtonAbsPos.X + ButtonAbsSize.X
-				and Mouse.Y >= ButtonAbsPos.Y
-				and Mouse.Y <= ButtonAbsPos.Y + ButtonAbsSize.Y
+			local isClickOnDropdown = getMouse().X >= ButtonAbsPos.X
+				and getMouse().X <= ButtonAbsPos.X + ButtonAbsSize.X
+				and getMouse().Y >= ButtonAbsPos.Y
+				and getMouse().Y <= ButtonAbsPos.Y + ButtonAbsSize.Y
 
-			local isClickOnMenu = Mouse.X >= AbsPos.X
-				and Mouse.X <= AbsPos.X + AbsSize.X
-				and Mouse.Y >= AbsPos.Y
-				and Mouse.Y <= AbsPos.Y + AbsSize.Y
+			local isClickOnMenu = getMouse().X >= AbsPos.X
+				and getMouse().X <= AbsPos.X + AbsSize.X
+				and getMouse().Y >= AbsPos.Y
+				and getMouse().Y <= AbsPos.Y + AbsSize.Y
 
 			if Config.Window.CanDropdown and Dropdown.Opened and not isClickOnDropdown and not isClickOnMenu then
 				DropdownModule:Close()

@@ -1,4 +1,3 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Creator = require("../../modules/Creator")
 local New = Creator.New
 local NewRoundFrame = Creator.NewRoundFrame

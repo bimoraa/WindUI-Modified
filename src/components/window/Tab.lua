@@ -2,10 +2,20 @@ local cloneref = (cloneref or clonereference or function(instance)
 	return instance
 end)
 
-local Players = game:GetService("Players")
+local Players = cloneref(game:GetService("Players"))
 
 local UserInputService = cloneref(game:GetService("UserInputService"))
-local Mouse = Players.LocalPlayer:GetMouse()
+local TweenService = cloneref(game:GetService("TweenService"))
+
+-- Resolve the Mouse lazily on first tooltip use instead of at module-require time:
+-- requiring Tab before LocalPlayer exists would otherwise crash the whole load.
+local Mouse
+local function getMouse()
+	if not Mouse then
+		Mouse = Players.LocalPlayer:GetMouse()
+	end
+	return Mouse
+end
 
 local Creator = require("../../modules/Creator")
 local New = Creator.New
@@ -365,14 +375,15 @@ function TabModule.New(Config, UIScale)
 					ToolTip = CreateToolTip(Tab.Desc, TabModule.ToolTipParent, true)
 					ToolTip.Container.AnchorPoint = Vector2.new(0.5, 0.5)
 
+					local mouse = getMouse()
 					local function updatePosition()
 						if ToolTip then
-							ToolTip.Container.Position = UDim2.new(0, Mouse.X, 0, Mouse.Y - 4)
+							ToolTip.Container.Position = UDim2.new(0, mouse.X, 0, mouse.Y - 4)
 						end
 					end
 
 					updatePosition()
-					MouseConn = Mouse.Move:Connect(updatePosition)
+					MouseConn = mouse.Move:Connect(updatePosition)
 					ToolTip:Open()
 				end
 			end)
@@ -618,7 +629,6 @@ function TabModule:SelectTab(TabIndex)
 				ContainerObject.Visible = false
 			end
 			TabModule.Containers[TabIndex].Visible = true
-			local TweenService = game:GetService("TweenService")
 
 			local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 			local tween = TweenService:Create(TabModule.Containers[TabIndex], tweenInfo, {
@@ -627,7 +637,8 @@ function TabModule:SelectTab(TabIndex)
 			tween:Play()
 		end)
 
-		TabModule.OnChangeFunc(TabIndex)
+		-- isolate the user OnChange listener so an error there can't break tab switching
+		Creator.SafeCallback(TabModule.OnChangeFunc, TabIndex)
 	end
 end
 

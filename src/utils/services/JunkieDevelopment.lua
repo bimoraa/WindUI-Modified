@@ -9,6 +9,16 @@
 local JunkieDevelopment = {}
 
 function JunkieDevelopment.New(ServiceId, ApiKey, Provider)
+    -- JunkieProtected is injected by an external loader; if that loader did not run,
+    -- indexing it here would crash the key path and hang window creation. Degrade gracefully.
+    if not JunkieProtected then
+        return {
+            Verify = function()
+                return false, "JunkieProtected loader not present"
+            end,
+            Copy = function() end,
+        }
+    end
     JunkieProtected.API_KEY = ApiKey
     JunkieProtected.PROVIDER = Provider
     JunkieProtected.SERVICE_ID = ServiceId
@@ -29,7 +39,7 @@ function JunkieDevelopment.New(ServiceId, ApiKey, Provider)
         local result = JunkieProtected.ValidateKey({ Key = key })
         if result == "valid" then
             print("Key is valid! Starting script...")
-            load()                                                                                                               
+            if load then pcall(load) end
             if _G.JD_IsPremium then                       
                 print("Premium user detected!")
             else

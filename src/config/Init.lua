@@ -108,10 +108,11 @@ function ConfigManager:Init(WindowTable)
     ConfigManager.Folder = Window.Folder
     ConfigManager.Path = "WindUI/" .. tostring(ConfigManager.Folder) .. "/config/"
     
-    if not isfolder(ConfigManager.Path) then
-        makefolder(ConfigManager.Path)
+    if isfolder and makefolder and not isfolder(ConfigManager.Path) then
+        -- pcall: some executors throw when makefolder races an already-created path
+        pcall(makefolder, ConfigManager.Path)
     end
-    
+
     local files = ConfigManager:AllConfigs()
     
     for _, f in next, files do

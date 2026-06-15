@@ -157,8 +157,12 @@ function Tag:New(TagConfig, Parent)
 
 	Creator:OnThemeChange(function(NewTheme, OldTheme)
 		TagTitle.TextColor3 = Creator.GetTextColorForHSB(Creator.GetThemeProperty(TagModule.Color, Creator.Theme))
-		TagIcon.ImageLabel.ImageColor3 =
-			Creator.GetTextColorForHSB(Creator.GetThemeProperty(TagModule.Color, Creator.Theme))
+		-- TagIcon only exists when the tag was created with an icon; guard it so theme
+		-- changes don't crash icon-less tags.
+		if TagIcon then
+			TagIcon.ImageLabel.ImageColor3 =
+				Creator.GetTextColorForHSB(Creator.GetThemeProperty(TagModule.Color, Creator.Theme))
+		end
 	end)
 
 	return TagModule

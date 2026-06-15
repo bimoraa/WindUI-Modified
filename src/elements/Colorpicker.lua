@@ -662,7 +662,9 @@ function Element:Colorpicker(Config, Window, WindUI, OnApply)
 
 	local CurInput = WindUI.GenerateGUID()
 
-	UserInputService.InputChanged:Connect(function(input)
+	-- AddSignal (not raw :Connect) so this global UserInputService listener is torn down by
+	-- DisconnectAll on window destroy instead of leaking + firing every mouse-move forever.
+	Creator.AddSignal(UserInputService.InputChanged, function(input)
 		if
 			input.UserInputType ~= Enum.UserInputType.MouseMovement
 			and input.UserInputType ~= Enum.UserInputType.Touch
@@ -735,32 +737,36 @@ function Element:Colorpicker(Config, Window, WindUI, OnApply)
 		UpdateHue(HueSlider, Colorpicker)
 	end)
 
-	TransparencySlider.InputBegan:Connect(function(input)
-		if
-			input.UserInputType ~= Enum.UserInputType.MouseButton1
-			and input.UserInputType ~= Enum.UserInputType.Touch
-		then
-			return
-		end
+	-- TransparencySlider only exists when this colorpicker was created with a Transparency
+	-- option; guard the whole connect so an icon-less/alpha-less picker doesn't crash on creation.
+	if TransparencySlider then
+		Creator.AddSignal(TransparencySlider.InputBegan, function(input)
+			if
+				input.UserInputType ~= Enum.UserInputType.MouseButton1
+				and input.UserInputType ~= Enum.UserInputType.Touch
+			then
+				return
+			end
 
-		if WindUI.CurrentInput and WindUI.CurrentInput ~= CurInput then
-			return
-		end
-		WindUI.CurrentInput = CurInput
+			if WindUI.CurrentInput and WindUI.CurrentInput ~= CurInput then
+				return
+			end
+			WindUI.CurrentInput = CurInput
 
-		if ActiveSlider and ActiveSlider ~= "Transparency" then
-			return
-		end
+			if ActiveSlider and ActiveSlider ~= "Transparency" then
+				return
+			end
 
-		ActiveSlider = "Transparency"
+			ActiveSlider = "Transparency"
 
-		local minY = TransparencySlider.AbsolutePosition.Y
-		activeBounds = { MinY = minY, MaxY = minY + TransparencySlider.AbsoluteSize.Y }
+			local minY = TransparencySlider.AbsolutePosition.Y
+			activeBounds = { MinY = minY, MaxY = minY + TransparencySlider.AbsoluteSize.Y }
 
-		UpdateTransparency(TransparencySlider, Colorpicker)
-	end)
+			UpdateTransparency(TransparencySlider, Colorpicker)
+		end)
+	end
 
-	UserInputService.InputEnded:Connect(function(input)
+	Creator.AddSignal(UserInputService.InputEnded, function(input)
 		ActiveSlider = nil
 		activeBounds = nil
 

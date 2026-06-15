@@ -44,14 +44,15 @@ function Toggle.New(Value, Icon, IconSize, Parent, Callback, NewElement, Config)
 	local Radius = 24 / 2
 	local IconToggleFrame
 	if Icon and Icon ~= "" then
+		local iconData = Creator.Icon(Icon) -- resolve once instead of 3 lookups
 		IconToggleFrame = New("ImageLabel", {
 			Size = UDim2.new(0, 20 - 7, 0, 20 - 7),
 			BackgroundTransparency = 1,
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.new(0.5, 0, 0.5, 0),
-			Image = Creator.Icon(Icon)[1],
-			ImageRectOffset = Creator.Icon(Icon)[2].ImageRectPosition,
-			ImageRectSize = Creator.Icon(Icon)[2].ImageRectSize,
+			Image = iconData[1],
+			ImageRectOffset = iconData[2].ImageRectPosition,
+			ImageRectSize = iconData[2].ImageRectSize,
 			ImageTransparency = 1,
 			ImageColor3 = Color3.new(0, 0, 0),
 		})

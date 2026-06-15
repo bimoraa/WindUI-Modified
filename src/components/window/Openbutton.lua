@@ -266,9 +266,7 @@ function OpenButton.New(Window)
         end
 
         Button.UIStroke.UIGradient.Color = OpenButtonModule.Color
-        if Glow then
-            Glow.UIGradient.Color = OpenButtonModule.Color
-        end
+        -- removed dead `if Glow then ...` block: Glow was an undeclared (always-nil) upvalue.
 
         Button.UICorner.CornerRadius = OpenButtonModule.CornerRadius
         Button.TextButton.UICorner.CornerRadius = UDim.new(OpenButtonModule.CornerRadius.Scale, OpenButtonModule.CornerRadius.Offset-4)
